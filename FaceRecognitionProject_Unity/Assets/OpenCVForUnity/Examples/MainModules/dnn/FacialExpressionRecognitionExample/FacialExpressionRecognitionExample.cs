@@ -12,6 +12,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+public class EmotionData
+{
+    public string Label { get; set; }
+    public float Confidence { get; set; }
+}
+
+
 namespace OpenCVForUnityExample
 {
     /// <summary>
@@ -31,6 +38,7 @@ namespace OpenCVForUnityExample
         /// The texture.
         /// </summary>
         Texture2D texture;
+        public List<Mat> expressions;
 
         /// <summary>
         /// The webcam texture to mat helper.
@@ -205,7 +213,7 @@ namespace OpenCVForUnityExample
                         tm.stop();
                         Debug.Log("YuNetFaceDetector Inference time, ms: " + tm.getTimeMilli());
 
-                        List<Mat> expressions = new List<Mat>();
+                        expressions = new List<Mat>();
 
                         // Estimate the expression of each face
                         for (int i = 0; i < faces.rows(); ++i)
@@ -346,7 +354,7 @@ namespace OpenCVForUnityExample
                     //tm.stop();
                     //Debug.Log("YuNetFaceDetector Inference time, ms: " + tm.getTimeMilli());
 
-                    List<Mat> expressions = new List<Mat>();
+                    expressions = new List<Mat>();
 
                     // Estimate the expression of each face
                     for (int i = 0; i < faces.rows(); ++i)
@@ -373,6 +381,54 @@ namespace OpenCVForUnityExample
                 Utils.matToTexture2D(rgbaMat, texture);
             }
 
+        }
+        
+        public List<EmotionData> GetCurrentEmotionData()
+        {
+            List<EmotionData> emotionDataList = new List<EmotionData>();
+
+            if (expressions == null)
+            {
+                Debug.LogError("expressions is null");
+                return emotionDataList;
+            }
+
+            if (facialExpressionRecognizer == null)
+            {
+                Debug.LogError("facialExpressionRecognizer is null");
+                return emotionDataList;
+            }
+
+            for (int i = 0; i < expressions.Count; i++)
+            {
+                Mat result = expressions[i];
+
+                if (result == null)
+                {
+                    Debug.LogError("result is null");
+                    continue;
+                }
+
+                FacialExpressionRecognizer.ClassificationData bmData = facialExpressionRecognizer.getBestMatchData(result);
+                string label = facialExpressionRecognizer.getClassLabel(bmData.cls);
+                float confidence = bmData.conf;
+
+                emotionDataList.Add(new EmotionData { Label = label, Confidence = confidence });
+            }
+
+            return emotionDataList;
+        }
+        
+        public string GetCurrentEmotionLabel()
+        {
+            List<EmotionData> emotionDataList = GetCurrentEmotionData();
+            return emotionDataList.Count > 0 ? emotionDataList[0].Label : null;
+        }
+
+        public float GetCurrentEmotionConfidence()
+        {
+            List<EmotionData> emotionDataList = GetCurrentEmotionData();
+            return emotionDataList.Count > 0 ? emotionDataList[0].Confidence : 0f;
         }
 
 
